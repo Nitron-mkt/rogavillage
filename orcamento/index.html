@@ -237,7 +237,11 @@ document.getElementById("tb-logo").src = LOGO;
    Para atualizar preços, altere SOMENTE este bloco.
    ===================================================================== */
 const TABELA = {
-  vigencia: "Tabela de Preços Roga Village",
+  vigencia: "Tabela de Preços + base de orçamentos 15/08–14/10/2026",
+  // O hotel: 15 Cubos, até 4 pessoas por Cubo = 60 pessoas hospedadas no máximo
+  hotel: { acomodacoes:15, maxHospedes:60 },
+  // Prática comercial (ainda fora da Tabela oficial): extensão de check-out = +50% da diária
+  extensaoCheckout: 0.5,
   // Diárias por acomodação (cubo). Eventos: ISS 2% à parte. Lazer: ISS embutido.
   hospedagem: {
     evento: { individual:{cafe:750,  pc:975},  duplo:{cafe:975,  pc:1270}, triplo:{cafe:1265, pc:1650}, quadruplo:{cafe:1585, pc:2140} },
@@ -301,9 +305,15 @@ const TABELA = {
     {k:"dj",        nome:"DJ", det:"DJ com Equipamentos — Happy Hour", v:4000},
     {k:"banda",     nome:"Banda", det:"Banda ao vivo — rider técnico conforme base Roga Village", v:0, consulta:true},
     {k:"rider",     nome:"Estrutura Técnica (Rider)", det:"Sonorização, iluminação e palco dimensionados a partir do rider técnico-base para evento com banda", v:0, consulta:true},
+    {k:"cozinha",   nome:"Cozinha (adicional ao espaço)", det:"Uso da cozinha como adicional à locação do espaço", v:15000, pratica:true},
     {k:"montagem",  nome:"Montagem Antecipada", det:"Montagem 1 dia antes do evento (sujeita a disponibilidade operacional)", v:0, consulta:true},
     {k:"ambulancia",nome:"Ambulância", det:"01 Motorista + 01 Enfermeiro durante o Evento", v:7000},
     {k:"salva",     nome:"Salva-Vidas", det:"01 Profissional durante o período do Evento", v:700}
+  ],
+  // Extras de hospedagem praticados (pacote de feriado) — lançar em Serviços com Qtd = pessoas × diárias
+  extrasHosp: [
+    {k:"adulto-extra",  nome:"Adulto extra", det:"Por pessoa, por diária", v:480, pratica:true},
+    {k:"crianca-extra", nome:"Criança extra", det:"Por criança, por diária", v:240, pratica:true}
   ],
   experiencias: [
     {k:"serenity", nome:"Essence Serenity", v:220, d:"Massagem Relaxante — 60 min\nExperiência sensorial completa que promove relaxamento profundo, alívio das tensões e equilíbrio do corpo e mente."},
@@ -324,27 +334,36 @@ const TABELA = {
    ===================================================================== */
 const TEXTOS_PADRAO = () => ([
   {k:"valor", tit:"Por que o Roga Village", on:true, txt:"Não vendemos simplesmente uma sala, uma diária ou uma refeição: entregamos uma experiência completa, construída de acordo com o objetivo do seu evento.\n• Produtos e insumos de qualidade\n• Estrutura preparada para receber eventos\n• Equipe treinada e atendimento eficiente\n• Experiência na operação de grandes eventos corporativos\n• Personalização da experiência conforme o objetivo do grupo"},
-  {k:"acomod", tit:"Acomodações", on:true, txt:"Cubos: 24 m², cama Box king size, Smart TV 43\", ar-condicionado, aquecimento individual, Alexa integrada, cofre digital e varanda."},
+  {k:"acomod", tit:"Acomodações", on:true, txt:"15 Cubos, até 4 pessoas por Cubo (60 hóspedes no total). Cada Cubo: 24 m², cama Box king size, Smart TV 43\", ar-condicionado, aquecimento individual, Alexa integrada, cofre digital e varanda."},
   {k:"pensao", tit:"Hospedagem com Pensão Completa — Horários", on:true, txt:"Café da Manhã (08h às 09h): combinação de pães, frios, frutas, bolos, croissants, bebidas quentes e frias e cereais.\nAlmoço (12h às 13h30): buffet com 04 tipos de saladas, 08 tipos de pratos quentes e 04 tipos de sobremesas variadas e compotas.\nChá da Tarde (17h às 18h): mix de pães, lanches frios, bolos, patês, salada de frutas, chá, café e leite.\nJantar (19h30 às 21h): buffet com 04 tipos de saladas, 08 tipos de pratos quentes e 04 tipos de sobremesas variadas e compotas."},
   {k:"sala", tit:"Sala de Eventos", on:true, txt:"Sala com vista panorâmica para o empreendimento, equipada com Painel de LED, sistema de som, microfone, blocos de anotações, canetas e uso de flip chart."},
-  {k:"horarios", tit:"Horários do Evento", on:true, txt:"Eventos de 1 diária (Day Use): locação das 08h às 22h.\nEventos com pernoite: sala/espaço a partir das 08h · check-in das acomodações a partir das 15h · check-out às 13h do dia seguinte.\nCheck-in antecipado, check-out posterior ou uso do espaço além do período padrão estão sujeitos a consulta e ajuste comercial."},
+  {k:"horarios", tit:"Horários do Evento", on:true, txt:"Eventos de 1 diária (Day Use): locação das 08h às 22h.\nEventos com pernoite: sala/espaço a partir das 08h · check-in das acomodações a partir das 15h · check-out às 13h do dia seguinte.\nCheck-in antecipado ou uso do espaço além do período padrão estão sujeitos a consulta e ajuste comercial.\nExtensão de check-out: adicional de 50% da diária, sujeita a disponibilidade."},
   {k:"funcionamento", tit:"Horários de Funcionamento", on:true, txt:"Piscina de Borda Infinita: 09h às 20h.\nSauna a Vapor: 09h às 20h (mediante solicitação).\nPasseio de UTV: 10h às 16h (verificar disponibilidade e custos adicionais para eventos)."},
-  {k:"lazer", tit:"Estrutura de Lazer", on:true, txt:"Trilha Ecológica · Pescaria Esportiva · Pôr do Sol na Janela de Deus · Stand-Up Paddle · Beach Tênis · Vôlei de Areia · Futevôlei · Futmesa · Mesa de Pôquer · Pebolim · Snooker · Mesa de Ping-Pong · Lareira Externa"},
+  {k:"lazer", tit:"Estrutura de Lazer", on:true, txt:"Piscina de Borda Infinita · Sauna a Vapor · Trilha Ecológica · Lago para Pesca Esportiva · Pôr do Sol no mirante da Janela de Deus · Stand-Up Paddle · Beach Tênis · Vôlei de Areia · Futevôlei · Futmesa · Mesa de Carteado · Pebolim · Sinuca · Mesa de Ping-Pong · Lareira Externa"},
+  {k:"pagamento", tit:"Formas de Pagamento", on:true, txt:"Pré-pagamento de 50% do valor total na confirmação; saldo conforme o Contrato de Prestação de Serviços.\nPix ou cartão de crédito — parcelamento: [a definir com a Gerência]."},
   {k:"info", tit:"Informações Adicionais", on:true, txt:"A reserva será considerada confirmada após o aceite desta proposta por e-mail, validação do hotel mediante disponibilidade e assinatura de contrato.\nApós a confirmação, caso ocorra alguma restrição ou indisponibilidade para a data solicitada, o Roga Village entrará em contato imediatamente informando uma data alternativa.\nPara garantia da data, será necessário o pré-pagamento de 50% do valor total da proposta no momento da confirmação. O valor restante deverá ser pago conforme condições definidas no Contrato de Prestação de Serviços, enviado após a confirmação da reserva.\nCancelamento superior a 90 dias da data do evento incidirá multa de 50% do valor contratado, podendo ser convertida em crédito para evento futuro (prazo de 6 meses). Cancelamento total ou parcial com antecedência igual ou superior a 60 dias: cobrança de 50%, sem direito a crédito. Cancelamento com antecedência menor que 60 dias da chegada do grupo: cobrança de 100% do valor total do evento estipulado em contrato."}
 ]);
 
 const BRIEFING = [
-  {g:"O evento", k:"tipo", q:"Tipo de evento e objetivo", h:"Convenção, treinamento, confraternização, imersão, Team Building…"},
+  {g:"O evento", k:"tipo", q:"Tipo de evento e objetivo", h:"Convenção, treinamento, confraternização, imersão, Team Building… o objetivo, não só o formato."},
+  {g:"O evento", k:"decisor", q:"Empresa e quem decide", h:"Nome da empresa e da pessoa que aprova a proposta."},
+  {g:"O evento", k:"datas", q:"Datas candidatas e variação de público", h:"Há mais de uma data? O nº de pessoas pode mudar? (ex.: 70 que viraram 40–45)"},
+  {g:"O evento", k:"exclusividade", q:"Quer exclusividade do espaço?", h:"Exclusividade = as 15 acomodações. Nesse caso não entra locação de espaço automática."},
+  {g:"O evento", k:"ambiente", q:"Espaço fechado, aberto ou os dois?", h:"Auditório/sala fechada, área externa para palestra, yoga ou fogueira."},
   {g:"O evento", k:"montagem", q:"Precisa de montagem antecipada?", h:"Só 1 dia antes e se houver disponibilidade operacional — confirmar antes de prometer."},
   {g:"O evento", k:"horario", q:"Horários fogem do padrão?", h:"Day Use 08h–22h · Pernoite: sala 08h, check-in 15h, check-out 13h."},
   {g:"A&B", k:"refeicoes", q:"Refeições definidas (tipo, horário, duração)?", h:"Mínimo comercial de 50 pessoas na alimentação."},
+  {g:"A&B", k:"restricao", q:"Restrição alimentar no grupo?", h:"Vegetariano, vegano, sem glúten, alergias. Cardápios Wellness atendem parte disso."},
+  {g:"A&B", k:"foraab", q:"Vão trazer alimentos, bebidas ou fornecedor de fora?", h:"Ex.: oficina de pizza com insumos do fornecedor do cliente. NÃO existe política — consultar a Gerência."},
   {g:"A&B", k:"bebidas", q:"Pacote de bebidas?", h:"Verificar: bebidas nas refeições, confraternização e bar."},
   {g:"A&B", k:"happy", q:"Haverá Happy Hour?", h:"Impacta bebidas, sonorização e horário de operação."},
   {g:"Técnica", k:"banda", q:"Haverá banda?", h:"Pergunta obrigatória. Banda → partir do rider técnico-base."},
   {g:"Técnica", k:"dj", q:"Haverá DJ?", h:"Pergunta obrigatória."},
   {g:"Técnica", k:"equip", q:"Palestras, apresentações, LED, iluminação, palco?", h:"Dimensionar pelo rider — nada de equipamento aleatório."},
   {g:"Experiência", k:"teambuilding", q:"É Team Building, imersão ou integração?", h:"Se sim, investigar objetivo e incluir Experiências Roga."},
-  {g:"Experiência", k:"perfil", q:"Perfil dos participantes e resultado esperado", h:"Tema, tempo disponível, nível de interação, necessidades específicas."}
+  {g:"Experiência", k:"perfil", q:"Perfil dos participantes e resultado esperado", h:"Tema, nível de interação, necessidades específicas."},
+  {g:"Experiência", k:"tempo", q:"Tempo disponível para dinâmica", h:"Ex.: 2h de integração antes do almoço."},
+  {g:"Experiência", k:"externo", q:"Vão trazer profissional ou atividade de fora?", h:"Pode, mas validar com a operação antes de confirmar."}
 ];
 
 /* =====================================================================
@@ -377,7 +396,8 @@ function novoOrcamento(numero){
     id: uid(), criado: new Date().toISOString(), atualizado: new Date().toISOString(),
     numero: numero || proximoNumero(),
     meta: { emissao:hoje(), validade:"", evento:"", empresa:"", agencia:"", contato:"", telefone:"", email:"",
-            formato:"dayuse", checkin:"", checkinHora:"08:00", checkout:"", checkoutHora:"22:00", pessoas:0, exclusividade:false },
+            formato:"dayuse", checkin:"", checkinHora:"08:00", checkout:"", checkoutHora:"22:00", pessoas:0, exclusividade:false, budget:0 },
+    status: { etapa:"rascunho", enviadoEm:"" },
     cfg: cfgPadrao(),
     hosp: [], ab: [], serv: [], exp: [],
     desconto: { valor:0, tipo:"pct", motivo:"", aprovadoPor:"" },
@@ -411,14 +431,22 @@ function exemplo(){
   o.briefing = { tipo:{r:"sim", n:"Day Use corporativo, 50 pessoas, encerramento com Happy Hour."}, dj:{r:"sim", n:""}, banda:{r:"nao", n:""}, happy:{r:"sim", n:"18h15 às 20h30"}, bebidas:{r:"sim", n:"Pacote Exclusive + Moscow Mule e Aperol"} };
   return o;
 }
-function hospRow(x={}){ return Object.assign({id:uid(), acomod:"triplo", tabela:"evento", regime:"cafe", checkin:"", checkout:"", diarias:1, pessoas:0, qtd:0, valor:TABELA.hospedagem.evento.triplo.cafe, ref:TABELA.hospedagem.evento.triplo.cafe}, x); }
+function hospRow(x={}){ return Object.assign({id:uid(), acomod:"triplo", tabela:"evento", regime:"cafe", checkin:"", checkout:"", diarias:1, pessoas:0, qtd:0, ext:false, valor:TABELA.hospedagem.evento.triplo.cafe, ref:TABELA.hospedagem.evento.triplo.cafe}, x); }
 function abRow(x={}){ const r = Object.assign({id:uid(), k:"", dur:"", tipo:"alimento", nome:"", horario:"", d:"", data:"", pax:0, valor:0, ref:null, minOverride:null}, x); if (r.ref == null && r.k && r.dur){ const it = TABELA.ab.find(i => i.k === r.k); r.ref = it ? it.p[r.dur] : null; } return r; }
-function servRow(x={}){ const r = Object.assign({id:uid(), k:"", nome:"", det:"", data:"", qtd:1, valor:0, ref:null, iss:false, espaco:false}, x); if (r.ref == null && r.k){ const it = [...TABELA.espacos, ...TABELA.servicos].find(i => i.k === r.k); r.ref = it && it.v ? it.v : null; } return r; }
+function servRow(x={}){ const r = Object.assign({id:uid(), k:"", nome:"", det:"", data:"", qtd:1, valor:0, ref:null, iss:false, espaco:false}, x); if (r.ref == null && r.k){ const it = [...TABELA.espacos, ...TABELA.servicos, ...TABELA.extrasHosp].find(i => i.k === r.k); r.ref = it && it.v ? it.v : null; } return r; }
 function expRow(x={}){ const r = Object.assign({id:uid(), k:"", nome:"", d:"", periodo:"a definir", pax:0, valor:0, ref:null}, x); if (r.ref == null && r.k){ const it = TABELA.experiencias.find(i => i.k === r.k); r.ref = it && it.v ? it.v : null; } return r; }
 
 let S = lsGet(LS_ATUAL, null) || exemplo();
 // migração leve: garante campos novos em orçamentos salvos antes
-S.cfg = Object.assign(cfgPadrao(), S.cfg || {}); S.briefing = S.briefing || {};
+function migrar(o){
+  o.cfg = Object.assign(cfgPadrao(), o.cfg || {}); o.briefing = o.briefing || {};
+  o.status = Object.assign({ etapa:"rascunho", enviadoEm:"" }, o.status || {});
+  o.meta.budget = o.meta.budget || 0;
+  // orçamentos salvos antes da base de 60 dias ganham o bloco de pagamento
+  if (!o.textos.some(t => t.k === "pagamento")){ const pg = TEXTOS_PADRAO().find(t => t.k === "pagamento"); const i = o.textos.findIndex(t => t.k === "info"); o.textos.splice(i < 0 ? o.textos.length : i, 0, pg); }
+  return o;
+}
+migrar(S);
 let abaAtual = "briefing";
 
 /* =====================================================================
@@ -433,7 +461,7 @@ function minimoAB(r){
 function calc(){
   const c = { hosp:{}, ab:{}, serv:{}, exp:{} };
   let subH = 0, baseIssH = 0, pessoasH = 0, acomH = 0;
-  S.hosp.forEach(r => { const t = num(r.valor) * num(r.qtd) * num(r.diarias); c.hosp[r.id] = t; subH += t; if (r.tabela === "evento") baseIssH += t; pessoasH += num(r.pessoas); acomH += num(r.qtd); });
+  S.hosp.forEach(r => { const t = num(r.valor) * num(r.qtd) * num(r.diarias) + (r.ext ? num(r.valor) * TABELA.extensaoCheckout * num(r.qtd) : 0); c.hosp[r.id] = t; subH += t; if (r.tabela === "evento") baseIssH += t; pessoasH += num(r.pessoas); acomH += num(r.qtd); });
   const issH = baseIssH * num(S.cfg.issHosp) / 100;
   let totAB = 0;
   S.ab.forEach(r => { const pax = num(r.pax); const min = minimoAB(r); const fat = pax > 0 ? Math.max(pax, min) : 0; const t = num(r.valor) * fat; c.ab[r.id] = {t, fat, min, aplicouMin: pax > 0 && fat > pax}; totAB += t; });
@@ -468,7 +496,8 @@ function checagens(C){
     if (m.checkout && m.checkin && m.checkout !== m.checkin) add("i", "Day Use com mais de um dia", "As datas de início e fim são diferentes. Se houver pernoite, mude o formato para Pernoite.");
   } else {
     if (m.checkinHora && h(m.checkinHora) < 15) add("a", "Check-in antecipado", "Check-in padrão é a partir das 15h (sala a partir das 08h). Antecipação exige análise e ajuste comercial — considere locação de sala/espaço.", "Guia §6");
-    if (m.checkoutHora && h(m.checkoutHora) > 13) add("a", "Check-out posterior", "Check-out padrão é às 13h. Uso prolongado deve ser analisado e pode gerar locação adicional de sala/espaço.", "Guia §6");
+    if (m.checkoutHora && h(m.checkoutHora) > 13 && !S.hosp.some(r => r.ext)) add("a", "Check-out posterior", "Check-out padrão é às 13h. Extensão de check-out = +50% da diária, sujeita a disponibilidade (marque “extensão de check-out” na hospedagem). Uso prolongado da sala pode gerar locação adicional.", "Guia §6 · prática");
+    if (num(m.pessoas) > TABELA.hotel.maxHospedes) add("a", "Grupo maior que a hospedagem", `${num(m.pessoas)} participantes; o hotel hospeda no máximo ${TABELA.hotel.maxHospedes} (15 Cubos × 4). Parte do grupo fica sem pernoite.`, "Base 60d §2.1");
     if (!S.hosp.length) add("i", "Pernoite sem hospedagem", "O evento está como Pernoite, mas não há hospedagem lançada.");
   }
   // Locação: evitar cobrança duplicada (§4)
@@ -476,6 +505,10 @@ function checagens(C){
   if (m.exclusividade && espacos.length) add("a", "Possível cobrança duplicada de espaço", "O cliente está locando todas as acomodações e há locação de espaço lançada. Não acrescentar locação automaticamente — analisar conforme a composição do evento.", "Guia §4, ex. 1");
   const porData = {}; espacos.forEach(r => { const k = r.data || "sem data"; (porData[k] = porData[k] || []).push(r.nome); });
   Object.entries(porData).forEach(([d, nomes]) => { if (nomes.length > 1) add("a", "Dois espaços na mesma data", `${nomes.join(" + ")} em ${d === "sem data" ? "data não informada" : dataBR(d)}. Confirme que não é o mesmo uso cobrado duas vezes.`, "Guia §4, ex. 2"); });
+  // Capacidade do hotel: 15 Cubos / 60 hóspedes
+  if (C.acomH > TABELA.hotel.acomodacoes) add("a", "Acomodações acima da capacidade", `${C.acomH} acomodações lançadas; o hotel tem ${TABELA.hotel.acomodacoes} Cubos.`, "Base 60d §2.1");
+  if (C.pessoasH > TABELA.hotel.maxHospedes) add("a", "Hóspedes acima da capacidade", `${C.pessoasH} hóspedes; máximo de ${TABELA.hotel.maxHospedes} (4 por Cubo).`, "Base 60d §2.1");
+  if (m.exclusividade && S.hosp.length && C.acomH < TABELA.hotel.acomodacoes) add("i", "Exclusividade com menos de 15 Cubos", `Exclusividade significa locar as ${TABELA.hotel.acomodacoes} acomodações; há ${C.acomH} lançadas.`, "Guia §4");
   // Montagem (§7)
   if (resp("montagem") === "sim" || S.serv.some(r => r.k === "montagem")) add("i", "Montagem antecipada", "Só 1 dia antes e mediante disponibilidade operacional. Confirme com a operação antes de prometer ao cliente.", "Guia §7");
   // Hospedagem: capacidade e preço
@@ -483,12 +516,15 @@ function checagens(C){
     const cap = TABELA.capacidade[r.acomod] || 1; const p = num(r.pessoas), q = num(r.qtd);
     if (p > q * cap) add("a", `Hospedagem linha ${i+1}: faltam acomodações`, `${p} pessoas em ${q} cubo(s) ${TABELA.nomeAcomod[r.acomod].toLowerCase()} (capacidade ${q*cap}). Sugestão: ${Math.ceil(p/cap)} acomodações.`);
     if (r.ref && num(r.valor) < r.ref) add("a", `Hospedagem linha ${i+1}: abaixo da tabela`, `${brl(r.valor)} contra ${brl(r.ref)} na tabela. Valor abaixo da tabela exige autorização prévia da Gerência.`, "Guia §3 e §16");
+    if (r.ref && num(r.valor) > r.ref * 1.5) add("a", `Hospedagem linha ${i+1}: muito acima da tabela`, `${brl(r.valor)} contra ${brl(r.ref)}. Confira se não é um pacote antigo — em 30/09 um pacote antigo de R$ 5.120 foi enviado a dois clientes e teve de ser retratado.`, "Base 60d §4");
+    if (r.tabela === "lazer" && r.ref && num(r.valor) !== r.ref) add("a", `Hospedagem linha ${i+1}: diária Lazer alterada`, `A Diária Lazer é o único bloco em que tabela e prática estão sincronizadas (${brl(r.ref)}). Não deve variar sem a Gerência.`, "Base 60d §3");
     const n = noites(r.checkin, r.checkout); if (n != null && n !== num(r.diarias)) add("i", `Hospedagem linha ${i+1}: diárias`, `As datas somam ${n} diária(s), mas a linha está com ${num(r.diarias)}.`);
   });
   if (S.hosp.length && num(m.pessoas) && C.pessoasH && C.pessoasH !== num(m.pessoas)) add("i", "Pessoas hospedadas × participantes", `${C.pessoasH} hospedados para ${num(m.pessoas)} participantes. Confira se é intencional.`);
   // A&B (§8)
   S.ab.forEach(r => {
     const c = C.ab[r.id]; if (!c) return;
+    if (r.ref && num(r.valor) > r.ref * 1.5) add("a", `${r.nome || "A&B"}: muito acima da tabela`, `${brl(r.valor)} contra ${brl(r.ref)} (${r.dur}). Confira se não é preço antigo.`, "Base 60d §4");
     if (r.ref && num(r.valor) < r.ref) add("a", `${r.nome || "A&B"}: abaixo da tabela`, `${brl(r.valor)} por pessoa contra ${brl(r.ref)} (${r.dur}) na tabela. Exige autorização da Gerência.`, "Guia §3 e §16");
     if (r.minOverride != null && r.minOverride !== "" && num(r.minOverride) < (r.tipo === "bebida" ? 20 : num(S.cfg.minPax))) add("a", `${r.nome || "A&B"}: mínimo reduzido manualmente`, "Mínimo abaixo da política. Registrar a autorização da Gerência.", "Guia §8 e §16");
   });
@@ -506,11 +542,28 @@ function checagens(C){
   if (resp("banda") === "sim" && !temItem(/banda/i)) add("a", "Banda confirmada e não orçada", "Lance a banda e a estrutura técnica a partir do rider técnico-base.", "Guia §11");
   if (resp("banda") === "sim" && !temItem(/rider|equip/i)) add("a", "Banda sem rider técnico", "Dimensione sonorização, iluminação e palco pelo rider técnico-base do Roga Village.", "Guia §11");
   if (resp("dj") === "sim" && !temItem(/\bdj\b/i)) add("a", "DJ confirmado e não orçado", "O briefing diz que haverá DJ.", "Guia §10");
+  if (resp("foraab") === "sim") add("a", "Alimentos, bebidas ou fornecedor de fora", "Não existe política da casa para isso. Defina com a Gerência (taxa, responsabilidade, uso da cozinha) antes de responder ao cliente.", "Base 60d §8");
+  if (resp("externo") === "sim") add("i", "Profissional ou atividade de fora", "Permitido, mas validar com a operação antes de confirmar.", "Base 60d §8");
+  if (resp("restricao") === "sim" && !S.ab.some(r => /wellness|vegetar|vegan|raízes/i.test(r.nome + " " + r.d))) add("i", "Restrição alimentar", "Há restrição no grupo: inclua opção vegetariana/Wellness (Raízes) ou descreva a adaptação no cardápio.");
+  // Preços só da prática (fora da Tabela oficial)
+  S.serv.filter(r => [...TABELA.servicos, ...TABELA.extrasHosp].some(t => t.k === r.k && t.pratica) && num(r.qtd)).forEach(r => add("i", `${r.nome}: preço da prática`, `${brl(r.valor)} vem dos orçamentos enviados, não da Tabela oficial. Confirmar com a Gerência.`, "Base 60d §2.6 e §3"));
   // Sob consulta com valor zero
   [...S.serv, ...S.exp].forEach(r => { if ((r.qtd ?? r.pax) && !num(r.valor)) add("i", `${r.nome}: valor sob consulta`, "Item sem valor. Defina o preço com a Gerência/operação antes de enviar."); });
   // Team Building (§13, §14)
   if (resp("teambuilding") === "sim" && !S.exp.some(r => num(r.pax) > 0)) add("a", "Team Building sem experiência", "Não trate como contratação de sala: inclua Experiências Roga (Mountain Trail, Floating, Jantar Harmonizado, wellness…).", "Guia §13");
+  const expAtivas = S.exp.filter(r => num(r.pax) > 0);
+  if (expAtivas.length && !S.ab.length && !S.serv.some(r => r.espaco) && S.hosp.every(r => r.tabela === "lazer")) add("a", "Experiência fora de evento", "As Experiências Roga só são realizadas dentro de evento — não são vendidas como day use ou para hospedagem de lazer.", "Base 60d §2.5");
   if (S.exp.some(r => r.k === "personalizada")) add("i", "Experiência personalizada", "Não prometer experiência exclusiva antes da validação da operação.", "Guia §14");
+  // Budget declarado pelo cliente
+  const bud = num(m.budget);
+  if (bud && C.total > bud) add("a", "Acima do budget do cliente", `${brl(C.total)} contra ${brl(bud)} declarados (+${Math.round((C.total / bud - 1) * 100)}%). Revise o escopo antes de enviar — orçamento “fora do que a gente precisava” não volta.`, "Base 60d §1 e §9");
+  else if (bud) add("i", "Dentro do budget do cliente", `${brl(C.total)} de ${brl(bud)} declarados (${Math.round(C.total / bud * 100)}%).`);
+  // Pagamento: não há política única de parcelamento
+  const pg = S.textos.find(t => t.k === "pagamento");
+  if (pg && pg.on && /\[a definir/i.test(pg.txt)) add("a", "Parcelamento não definido", "Hoje convivem 3x, 5x e 12x. Defina o parcelamento desta proposta com a Gerência e edite o bloco “Formas de Pagamento”.", "Base 60d §7");
+  // Follow-up: orçamento enviado sem desfecho
+  const dEnv = S.status.etapa === "enviado" && S.status.enviadoEm ? Math.floor((Date.now() - new Date(S.status.enviadoEm)) / 864e5) : 0;
+  if (dEnv > 10) add("a", "Proposta sem desfecho", `Enviada há ${dEnv} dias. Faça o follow-up e registre ganho ou perdido na aba Arquivo.`, "Base 60d §1");
   // Desconto (§16)
   if (C.desc > 0) add("a", "Desconto comercial", `Desconto de ${brl(C.desc)}${S.desconto.aprovadoPor ? " — aprovado por " + S.desconto.aprovadoPor : " sem aprovação registrada"}. Toda exceção passa pela Gerência.`, "Guia §16");
   return A;
@@ -543,7 +596,9 @@ function render(){
     <tr class="${t ? "" : "zerado " + oz}">
       <td style="min-width:150px"><div class="item-tit">Cubo ${F(`hosp.${i}.acomod`,{t:"select",opts:Object.entries(TABELA.nomeAcomod)})}</div>
         <div class="desc">${F(`hosp.${i}.regime`,{t:"select",opts:[["cafe","Com Café da Manhã incluso"],["pc","Pensão Completa"]]})}</div>
-        <div class="desc no-print">${F(`hosp.${i}.tabela`,{t:"select",opts:[["evento","Tabela Eventos (ISS à parte)"],["lazer","Tabela Lazer (ISS embutido)"]]})}</div></td>
+        <div class="desc no-print">${F(`hosp.${i}.tabela`,{t:"select",opts:[["evento","Tabela Eventos (ISS à parte)"],["lazer","Tabela Lazer (ISS embutido)"]]})}</div>
+        <label class="chk no-print" style="font-size:11.5px;margin:2px 0 0"><input type="checkbox" data-k="hosp.${i}.ext" data-t="bool" ${r.ext ? "checked" : ""}> extensão de check-out (+50% da diária)</label>
+        ${r.ext ? `<div class="desc">+ Extensão de check-out (50% da diária)</div>` : ""}</td>
       <td>${F(`hosp.${i}.checkin`,{t:"date",vazio:"-"})}</td>
       <td>${F(`hosp.${i}.checkout`,{t:"date",vazio:"-"})}</td>
       <td class="r">${F(`hosp.${i}.diarias`,{t:"num",w:"56px"})}</td>
@@ -620,7 +675,7 @@ function render(){
     <div class="box"><div class="r">Nº de pessoas</div><div class="v">${F("meta.pessoas",{t:"num",w:"80px"})}</div></div>
     <div class="box"><div class="r">Nº de acomodações</div><div class="v"><span data-live="acomH">${C.acomH || "-"}</span><span class="auto" title="Soma da seção Hospedagem">auto</span></div></div>
     <div class="box"><div class="r">Nº de diárias</div><div class="v"><span data-live="diarias">${C.diariasEvento || "-"}</span><span class="auto" title="Calculado pelas datas">auto</span></div></div>
-    <div class="box ${m.exclusividade ? "" : "oculta-print"}"><div class="r">Exclusividade</div><div class="v"><label class="chk no-print" style="margin:0"><input type="checkbox" data-k="meta.exclusividade" data-t="bool" ${m.exclusividade ? "checked" : ""}> todas as acomodações</label><span class="pv">${m.exclusividade ? "Locação de todas as acomodações" : "Não"}</span></div></div>
+    <div class="box ${m.exclusividade ? "" : "oculta-print"}"><div class="r">Exclusividade</div><div class="v"><label class="chk no-print" style="margin:0"><input type="checkbox" data-k="meta.exclusividade" data-t="bool" ${m.exclusividade ? "checked" : ""}> as 15 acomodações</label><span class="pv">${m.exclusividade ? "Locação das 15 acomodações" : "Não"}</span></div></div>
   </div>
 
   <section class="secao ${vis("hosp", C.totH)}">
@@ -711,7 +766,9 @@ function renderPainel(C){
   document.querySelectorAll("#abas button").forEach(b => b.classList.toggle("on", b.dataset.aba === abaAtual));
   const P = $("#painel"); let h = "";
   if (abaAtual === "briefing"){
-    h += `<p class="ajuda" style="margin-top:0">Antes de montar a proposta, entenda o evento (Guia §2). Estas respostas alimentam as checagens e não aparecem no PDF.</p>`;
+    h += `<p class="ajuda" style="margin-top:0">Antes de montar a proposta, entenda o evento (Guia §2). Estas respostas alimentam as checagens e não aparecem no PDF.</p>
+      <div class="q"><div class="qt">Budget declarado pelo cliente (R$)<small>Se o cliente disse um número, anote: ele muda a composição inteira.</small></div>
+      <input type="number" min="0" step="100" data-k="meta.budget" data-t="num" value="${num(S.meta.budget) || ""}" placeholder="ex.: 35000" style="width:100%;border:1px solid var(--linha);border-radius:4px;padding:4px 6px"></div>`;
     let g = "";
     BRIEFING.forEach(q => { if (q.g !== g){ g = q.g; h += `<h3>${g}</h3>`; } const b = S.briefing[q.k] || {}; h += `<div class="q"><div class="qt">${q.q}<small>${q.h}</small></div>
       <div class="seg">${[["sim","Sim"],["nao","Não"],["nd","A definir"]].map(([k,l]) => `<button data-act="brief" data-q="${q.k}" data-r="${k}" class="${b.r === k ? "on" : ""}">${l}</button>`).join("")}</div>
@@ -721,7 +778,7 @@ function renderPainel(C){
       <span>Por participante</span><b>${num(S.meta.pessoas) ? brl(C.total / num(S.meta.pessoas)) : "—"}</b>
       <span>A&amp;B por participante</span><b>${num(S.meta.pessoas) ? brl(C.totAB / num(S.meta.pessoas)) : "—"}</b></div><h3>Pontos de atenção</h3>`;
     h += A.length ? A.map(a => `<div class="alerta ${a.nivel}"><b>${esc(a.tit)}</b>${esc(a.txt)}${a.ref ? `<span class="ref">${a.ref}</span>` : ""}</div>`).join("") : `<div class="vazio">✓ Nenhum ponto pendente. Proposta pronta para envio.</div>`;
-    h += `<p class="ajuda">Laranja = resolver ou aprovar com a Gerência antes de enviar. Azul = conferir.</p>`;
+    h += `<p class="ajuda">Laranja = resolver ou aprovar com a Gerência antes de enviar. Azul = conferir.</p><p class="ajuda">Preços: ${TABELA.vigencia}.</p>`;
   } else if (abaAtual === "ajustes"){
     h += `<h3>Política de preço</h3><div class="cfg">
       <label>Mínimo comercial de alimentação (pax)</label><input type="number" min="0" data-k="cfg.minPax" data-t="num" value="${num(S.cfg.minPax)}">
@@ -740,10 +797,16 @@ function renderPainel(C){
       <button class="btn line sm" data-act="textos-padrao">Restaurar textos padrão</button>`;
   } else {
     const lista = lsGet(LS_LISTA, {}); const itens = Object.values(lista).sort((a,b) => (b.atualizado||"").localeCompare(a.atualizado||""));
-    h += `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn line sm" data-act="salvar">Salvar neste navegador</button><button class="btn line sm" data-act="exportar">Baixar arquivo (.json)</button><button class="btn line sm" data-act="importar">Abrir arquivo…</button><button class="btn line sm" data-act="exemplo">Carregar exemplo</button></div>
+    const ETAPAS = [["rascunho","Rascunho"],["enviado","Enviado"],["ganho","Ganho"],["perdido","Perdido"]];
+    h += `<h3>Status deste orçamento</h3><div class="seg">${ETAPAS.map(([k,l]) => `<button data-act="etapa" data-etapa="${k}" class="${S.status.etapa === k ? "on" : ""}">${l}</button>`).join("")}</div>
+      <p class="ajuda">${S.status.enviadoEm ? "Enviado em " + dataBR(S.status.enviadoEm) + ". " : ""}Exportar o PDF marca como Enviado. Registre Ganho ou Perdido: sem desfecho, o orçamento fica parado.</p><h3>Arquivo</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn line sm" data-act="salvar">Salvar neste navegador</button><button class="btn line sm" data-act="exportar">Baixar arquivo (.json)</button><button class="btn line sm" data-act="importar">Abrir arquivo…</button><button class="btn line sm" data-act="exemplo">Carregar exemplo</button></div>
       <p class="ajuda">Salvar guarda o orçamento neste navegador. Para guardar em rede, enviar a um colega ou trocar de computador, use “Baixar arquivo” e depois “Abrir arquivo…”.</p>
       <h3>Orçamentos salvos (${itens.length})</h3><div class="lista-orc">`;
-    h += itens.length ? itens.map(o => `<div class="o ${o.id === S.id ? "atual" : ""}"><div><div class="nm">${esc(o.numero)} — ${esc(o.meta.empresa || "sem empresa")}</div><small>${esc(o.meta.evento || "")} ${o.meta.checkin ? "· " + dataBR(o.meta.checkin) : ""} · ${brl(o._total)}</small></div>
+    const parado = o => { const st = o.status || {}; if (st.etapa !== "enviado" || !st.enviadoEm) return 0; return Math.floor((Date.now() - new Date(st.enviadoEm)) / 864e5); };
+    const nParados = itens.filter(o => parado(o) > 10).length;
+    if (nParados) h += `<div class="alerta a"><b>${nParados} proposta(s) sem desfecho há mais de 10 dias</b>Faça o follow-up e marque Ganho ou Perdido.</div>`;
+    h += itens.length ? itens.map(o => `<div class="o ${o.id === S.id ? "atual" : ""}"><div><div class="nm">${esc(o.numero)} — ${esc(o.meta.empresa || "sem empresa")} <span class="tag ${parado(o) > 10 ? "warn" : ""}">${esc(((o.status || {}).etapa) || "rascunho")}${parado(o) > 10 ? " · " + parado(o) + " dias" : ""}</span></div><small>${esc(o.meta.evento || "")} ${o.meta.checkin ? "· " + dataBR(o.meta.checkin) : ""} · ${brl(o._total)}</small></div>
       <div style="display:flex;gap:4px"><button class="btn line sm" data-act="abrir" data-id="${o.id}">Abrir</button><button class="btn line sm danger" data-act="excluir" data-id="${o.id}">×</button></div></div>`).join("") : `<p class="ajuda">Nenhum orçamento salvo ainda.</p>`;
     h += `</div>`;
   }
@@ -775,10 +838,11 @@ function desenharCatalogo(){
     h += `</div><div class="cat-grupo"><h4>Fora da tabela</h4>${item("livre", "Item livre / cardápio personalizado", "Descrição e valor definidos por você", "—")}</div>`;
   } else if (L === "serv"){
     h += `<div class="cat-grupo"><h4>Locação de espaço (Tabela de Preços)</h4>${TABELA.espacos.map(e => item(e.k, e.nome, e.det, brl(e.v), "por diária")).join("")}</div>`;
-    h += `<div class="cat-grupo"><h4>Serviços (referência do modelo)</h4>${TABELA.servicos.map(e => item(e.k, e.nome, e.det, e.consulta ? "sob consulta" : brl(e.v))).join("")}</div>`;
+    h += `<div class="cat-grupo"><h4>Serviços (referência do modelo e da prática)</h4>${TABELA.servicos.map(e => item(e.k, e.nome, e.det, e.consulta ? "sob consulta" : brl(e.v), e.pratica ? "prática — não oficial" : "")).join("")}</div>`;
+    h += `<div class="cat-grupo"><h4>Extras de hospedagem (prática — pacote de feriado)</h4>${TABELA.extrasHosp.map(e => item(e.k, e.nome, e.det, brl(e.v), "Qtd = pessoas × diárias")).join("")}</div>`;
     h += `<div class="cat-grupo"><h4>Outro</h4>${item("livre", "Item livre", "Descrição e valor definidos por você", "—")}</div>`;
   } else {
-    h += `<div class="cat-grupo"><h4>Experiências Roga</h4>${TABELA.experiencias.map(e => item(e.k, e.nome, e.d, e.consulta ? "sob consulta" : brl(e.v), e.consulta ? "" : "por pessoa")).join("")}</div>`;
+    h += `<p class="ajuda" style="margin:4px 0 0">As Experiências Roga só são realizadas <b>dentro de evento</b> — não vendemos como day use avulso.</p><div class="cat-grupo"><h4>Experiências Roga</h4>${TABELA.experiencias.map(e => item(e.k, e.nome, e.d, e.consulta ? "sob consulta" : brl(e.v), e.consulta ? "" : "por pessoa")).join("")}</div>`;
     h += `<div class="cat-grupo"><h4>Outro</h4>${item("livre", "Experiência livre", "Descrição e valor definidos por você", "—")}</div>`;
   }
   $("#dlg-corpo").innerHTML = h;
@@ -794,7 +858,7 @@ function escolher(key){
     else { const it = TABELA.ab.find(i => i.k === key); S.ab.push(abRow({k:it.k, dur:dlgDur, tipo:it.tipo, nome:it.nome, horario:`${TABELA.duracoes[dlgDur].rot} de duração`, d:it.d, data, pax, valor:it.p[dlgDur], ref:it.p[dlgDur]})); }
   } else if (L === "serv"){
     if (key === "livre") S.serv.push(servRow({data}));
-    else { const e = TABELA.espacos.find(i => i.k === key), s = TABELA.servicos.find(i => i.k === key), it = e || s;
+    else { const e = TABELA.espacos.find(i => i.k === key), it = e || [...TABELA.servicos, ...TABELA.extrasHosp].find(i => i.k === key);
       S.serv.push(servRow({k:it.k, nome:it.nome, det:it.det, data, qtd:1, valor:it.v, ref:it.v || null, espaco:!!e, iss:!!e})); }
   } else {
     if (key === "livre") S.exp.push(expRow({pax}));
@@ -854,13 +918,14 @@ document.addEventListener("click", e => {
   else if (a === "dur"){ dlgDur = b.dataset.dur; desenharCatalogo(); }
   else if (a === "pick") escolher(b.dataset.key);
   else if (a === "rm"){ const L = b.dataset.lista; S[L] = S[L].filter(r => r.id !== b.dataset.id); mudou(true); }
+  else if (a === "etapa"){ S.status.etapa = b.dataset.etapa; if (b.dataset.etapa === "enviado" && !S.status.enviadoEm) S.status.enviadoEm = hoje(); salvarNaLista(); mudou(false); }
   else if (a === "brief"){ const q = b.dataset.q; const atual = (S.briefing[q] || {}).r; S.briefing[q] = Object.assign({}, S.briefing[q], {r: atual === b.dataset.r ? "" : b.dataset.r}); mudou(false); }
   else if (a === "pdf") exportarPDF();
   else if (a === "salvar"){ salvarNaLista(); toast(`Orçamento ${S.numero} salvo`); renderPainel(); }
   else if (a === "novo"){ salvarNaLista(); S = novoOrcamento(); abaAtual = "briefing"; mudou(true); toast(`Novo orçamento ${S.numero}`); }
-  else if (a === "duplicar"){ salvarNaLista(); const c = JSON.parse(JSON.stringify(S)); c.id = uid(); c.numero = proximoNumero(); c.criado = c.atualizado = new Date().toISOString(); c.meta.emissao = hoje(); c.desconto.aprovadoPor = ""; S = c; mudou(true); toast(`Cópia criada: ${S.numero}`); }
+  else if (a === "duplicar"){ salvarNaLista(); const c = JSON.parse(JSON.stringify(S)); c.id = uid(); c.numero = proximoNumero(); c.criado = c.atualizado = new Date().toISOString(); c.meta.emissao = hoje(); c.desconto.aprovadoPor = ""; c.status = { etapa:"rascunho", enviadoEm:"" }; S = c; mudou(true); toast(`Cópia criada: ${S.numero}`); }
   else if (a === "exemplo"){ salvarNaLista(); S = exemplo(); S.id = uid(); mudou(true); toast("Exemplo carregado"); }
-  else if (a === "abrir"){ salvarNaLista(); const o = lsGet(LS_LISTA, {})[b.dataset.id]; if (o){ delete o._total; S = o; S.cfg = Object.assign(cfgPadrao(), S.cfg); mudou(true); toast(`Aberto: ${S.numero}`); } }
+  else if (a === "abrir"){ salvarNaLista(); const o = lsGet(LS_LISTA, {})[b.dataset.id]; if (o){ delete o._total; S = migrar(o); mudou(true); toast(`Aberto: ${S.numero}`); } }
   else if (a === "excluir"){ const l = lsGet(LS_LISTA, {}); const o = l[b.dataset.id]; if (o && confirm(`Excluir o orçamento ${o.numero} deste navegador?`)){ delete l[b.dataset.id]; lsSet(LS_LISTA, l); renderPainel(); } }
   else if (a === "exportar") exportarJSON();
   else if (a === "importar") $("#arq-import").click();
@@ -871,10 +936,11 @@ $("#dlg").addEventListener("click", e => { if (e.target === $("#dlg")) $("#dlg")
 function salvarNaLista(){ const l = lsGet(LS_LISTA, {}); const c = JSON.parse(JSON.stringify(S)); c._total = calc().total; l[S.id] = c; if (!lsSet(LS_LISTA, l)) toast("Não foi possível salvar neste navegador — use “Baixar arquivo”."); lsSet(LS_ATUAL, S); }
 function nomeArquivo(ext){ return `Proposta ${S.numero.replace("/","-")}${S.meta.empresa ? " - " + S.meta.empresa : ""} - Roga Village.${ext}`.replace(/[\\/:*?"<>|]/g, ""); }
 function exportarJSON(){ const blob = new Blob([JSON.stringify(S, null, 2)], {type:"application/json"}); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nomeArquivo("json"); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
-function importar(input){ const f = input.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { const o = JSON.parse(rd.result); if (!o.meta || !Array.isArray(o.ab)) throw 0; salvarNaLista(); S = o; S.cfg = Object.assign(cfgPadrao(), S.cfg); S.briefing = S.briefing || {}; mudou(true); toast(`Aberto: ${S.numero}`); } catch { toast("Arquivo inválido"); } input.value = ""; }; rd.readAsText(f); }
+function importar(input){ const f = input.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { const o = JSON.parse(rd.result); if (!o.meta || !Array.isArray(o.ab)) throw 0; salvarNaLista(); S = migrar(o); mudou(true); toast(`Aberto: ${S.numero}`); } catch { toast("Arquivo inválido"); } input.value = ""; }; rd.readAsText(f); }
 function exportarPDF(){
   const C = calc(); const pend = checagens(C).filter(a => a.nivel === "a");
   if (pend.length && !confirm(`Há ${pend.length} ponto(s) de atenção na aba Checagens.\n\nGerar o PDF mesmo assim?`)){ abaAtual = "checagens"; renderPainel(); return; }
+  if (S.status.etapa === "rascunho"){ S.status.etapa = "enviado"; S.status.enviadoEm = hoje(); }
   salvarNaLista(); document.activeElement && document.activeElement.blur();
   document.title = nomeArquivo("pdf").replace(/\.pdf$/, "");
   toast("Na janela de impressão, escolha “Salvar como PDF”"); setTimeout(() => window.print(), 250);
